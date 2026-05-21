@@ -5,7 +5,7 @@
 #include <mach-o/dyld.h>
 #include <unistd.h>
 
-// Подключаем KittyMemory (в облачной сборке она подтянется автоматически)
+// Подключаем KittyMemory
 #include "KittyMemory/KittyMemory.hpp"
 
 struct Vector3 { float x, y, z; };
@@ -28,32 +28,54 @@ namespace AppOffsets {
 }
 
 void MemoryReaderThread() {
+    // В оригинальной KittyMemory нужно сначала инициализировать память под процесс/модуль
+    KittyMemory::ProcInfo proc_info;
     uintptr_t baseAddress = 0;
+    
     while (baseAddress == 0) {
-        // Получаем базу libUE4.so в памяти iOS
-        baseAddress = KittyMemory::get_image_base_address("libUE4.so");
+        // Получаем информацию о модуле libUE4.so
+        proc_info = KittyMemory::get_image_info_by_name("libUE4.so");
+        baseAddress = proc_info.address;
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     while (g_KeepRunning.load()) {
-        uintptr_t gWorld = KittyMemory::Read<uintptr_t>(baseAddress + AppOffsets::GWorld);
+        // В оригинальной KittyMemory чтение происходит через KittyMemory::readData
+        uintptr_t gWorld = 0;
+        KittyMemory::readData((void*)(baseAddress + AppOffsets::GWorld), &gWorld, sizeof(gWorld));
+        
         if (!gWorld) { 
             std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
             continue; 
         }
 
-        uintptr_t gameInstance = KittyMemory::Read<uintptr_t>(gWorld + AppOffsets::GameInstance);
-        uintptr_t localPlayersList = KittyMemory::Read<uintptr_t>(gameInstance + AppOffsets::LocalPlayers);
-        uintptr_t localPlayer = KittyMemory::Read<uintptr_t>(localPlayersList); 
-        uintptr_t playerController = KittyMemory::Read<uintptr_t>(localPlayer + AppOffsets::PlayerController);
-        uintptr_t myPawn = KittyMemory::Read<uintptr_t>(playerController + AppOffsets::MyPawn);
+        uintptr_t gameInstance = 0;
+        KittyMemory::readData((void*)(gWorld + AppOffsets::GameInstance), &gameInstance, sizeof(gameInstance));
+        
+        uintptr_t localPlayersList = 0;
+        KittyMemory::readData((void*)(gameInstance + AppOffsets::LocalPlayers), &localPlayersList, sizeof(localPlayersList));
+        
+        uintptr_t localPlayer = 0;
+        KittyMemory::readData((void*)(localPlayersList), &localPlayer, sizeof(localPlayer)); 
+        
+        uintptr_t playerController = 0;
+        KittyMemory::readData((void*)(localPlayer + AppOffsets::PlayerController), &playerController, sizeof(playerController));
+        
+        uintptr_t myPawn = 0;
+        KittyMemory::readData((void*)(playerController + AppOffsets::MyPawn), &myPawn, sizeof(myPawn));
         
         if (myPawn) {
-            uintptr_t rootComp = KittyMemory::Read<uintptr_t>(myPawn + AppOffsets::RootComponent);
-            Vector3 myPos = KittyMemory::Read<Vector3>(rootComp + AppOffsets::RelativeLocation);
+            uintptr_t rootComp = 0;
+            KittyMemory::readData((void*)(myPawn + AppOffsets::RootComponent), &rootComp, sizeof(rootComp));
             
-            uintptr_t playerState = KittyMemory::Read<uintptr_t>(myPawn + AppOffsets::PlayerState);
-            int myTeam = KittyMemory::Read<int>(playerState + AppOffsets::TeamID);
+            Vector3 myPos = {0, 0, 0};
+            KittyMemory::readData((void*)(rootComp + AppOffsets::RelativeLocation), &myPos, sizeof(myPos));
+            
+            uintptr_t playerState = 0;
+            KittyMemory::readData((void*)(myPawn + AppOffsets::PlayerState), &playerState, sizeof(playerState));
+            
+            int myTeam = 0;
+            KittyMemory::readData((void*)(playerState + AppOffsets::TeamID), &myTeam, sizeof(myTeam));
 
             TargetData data;
             data.position = myPos;
