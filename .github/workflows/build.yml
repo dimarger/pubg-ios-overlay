@@ -10,19 +10,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
 
-    - name: Set up Theos
+    - name: Set up Theos and iOS SDK
       run: |
         bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
         echo "THEOS=~/theos" >> $GITHUB_ENV
         
-    - name: Build Tweak
+    - name: Compile Tweak Binary
       run: |
         make package FINALPACKAGE=1
         
-    - name: Upload Result
-      uses: actions/upload-artifact@v3
+    - name: Upload Dynamic Library
+      uses: actions/upload-artifact@v4
       with:
         name: GameOverlay-dylib
         path: .theos/obj/debug/GameOverlay.dylib
