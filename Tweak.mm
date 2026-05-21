@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 // Подключаем KittyMemory (в облачной сборке она подтянется автоматически)
-#include "KittyMemory/Memory.hpp"
+#include "KittyMemory/KittyMemory.hpp"
 
 struct Vector3 { float x, y, z; };
 struct TargetData { Vector3 position; int health; int team; };
