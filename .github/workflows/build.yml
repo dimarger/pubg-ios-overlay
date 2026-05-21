@@ -1,0 +1,28 @@
+name: Build iOS Tweak
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Theos
+      run: |
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+        echo "THEOS=~/theos" >> $GITHUB_ENV
+        
+    - name: Build Tweak
+      run: |
+        make package FINALPACKAGE=1
+        
+    - name: Upload Result
+      uses: actions/upload-artifact@v3
+      with:
+        name: GameOverlay-dylib
+        path: .theos/obj/debug/GameOverlay.dylib
